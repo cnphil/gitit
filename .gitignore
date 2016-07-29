@@ -8,4 +8,5 @@ gitit.log
 my.conf
 gitit-users
 .cabal-sandbox
+.stack-work/
 github.conf

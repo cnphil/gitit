@@ -171,7 +171,7 @@ wikiHandlers =
     guardBareBase >> getWikiBase >>= \b -> movedPermanently (b ++ "/") (toResponse ())
   , dir "_activity" showActivity
   , dir "_go"       goToPage
-  , method GET >> dir "_search"   searchResults
+  , method GET >> dir "_search"   (authenticate ForModify searchResults)
   , dir "_upload"   $  do guard =<< return . uploadsAllowed =<< getConfig
                           msum [ method GET  >> authenticate ForModify uploadForm
                                  , method POST >> authenticate ForModify uploadFile ]
@@ -181,16 +181,16 @@ wikiHandlers =
   , dir "_category" categoryPage
   , dir "_categories" categoryListPage
   , dir "_expire"     expireCache
-  , dir "_showraw"  $ msum
+  , dir "_showraw"  $ authenticate ForModify (msum
       [ showRawPage
-      , guardPath isSourceCode >> showFileAsText ]
-  , dir "_history"  $ msum
+      , guardPath isSourceCode >> showFileAsText ])
+  , dir "_history"  $ authenticate ForModify (msum
       [ showPageHistory
-      , guardPath isSourceCode >> showFileHistory ]
+      , guardPath isSourceCode >> showFileHistory ])
   , dir "_edit" $ authenticate ForModify (unlessNoEdit editPage showPage)
-  , dir "_diff" $ msum
+  , dir "_diff" $ authenticate ForModify (msum
       [ showPageDiff
-      , guardPath isSourceCode >> showFileDiff ]
+      , guardPath isSourceCode >> showFileDiff ])
   , dir "_discuss" discussPage
   , dir "_delete" $ msum
       [ method GET  >>
@@ -199,12 +199,14 @@ wikiHandlers =
           authenticate ForModify (unlessNoDelete deletePage showPage) ]
   , dir "_preview" preview
   , guardIndex >> indexPage
-  , guardCommand "export" >> exportPage
+  , guardCommand "export" >> authenticate ForModify exportPage
   , method POST >> guardCommand "cancel" >> showPage
   , method POST >> guardCommand "update" >>
       authenticate ForModify (unlessNoEdit updatePage showPage)
+  , dir "p" $ authenticate ForModify showPage
   , showPage
-  , guardPath isSourceCode >> method GET >> showHighlightedSource
+  , guardPath isSourceCode >> method GET >>
+      (authenticate ForModify showHighlightedSource)
   , handleAny
   , notFound =<< (guardPath isPage >> createPage)
   ]
